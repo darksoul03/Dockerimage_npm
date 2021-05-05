@@ -1,20 +1,14 @@
-FROM quay.cnqr.delivery/baseimage/node as build
+FROM ubuntu as build
 ENV NODE_ENV=development
 ENV BLUEBIRD_DEBUG=0
-WORKDIR /build
-ARG ARTIFACTORY_URI=https://artifactory.concurtech.net/artifactory
 CMD ["echo", "quay.cnqr.delivery/baseimage/node"]
+RUN apt-get update && apt-get install -y curl unzip && apt-get clean && rm -rf /var/lib/apt/lists/*
+RUN curl -sL https://deb.nodesource.com/setup_12.x | bash -
+RUN curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | apt-key add -
+RUN echo "deb https://dl.yarnpkg.com/debian/ stable main" | tee /etc/apt/sources.list.d/yarn.list
+RUN apt-get update -qq && apt-get install -qq --no-install-recommends \
+  nodejs \
+  yarn \
+  && rm -rf /var/lib/apt/lists/*
 RUN npm install
-RUN npm config set registry=$ARTIFACTORY_URI/api/npm/npm-aggregate/
-COPY package.json package-lock.json docker-entrypoint.sh sonar-project.properties ./
-RUN npm install
-COPY .babelrc ./
-COPY src ./src
-COPY test ./test
 ENV NODE_ENV=production
-RUN npm run sonar:test && \
-npm run translate && \
-npm run build && \
-npm run pack && \
-rm -rf src && \
-rm -rf test
